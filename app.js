@@ -63,7 +63,7 @@ async function loadLyrics(title, artist) {
 async function refreshTrack() {
   if (!state.token) { setConnection("NOT CONNECTED", "Войди через Spotify, чтобы увидеть текущий трек"); return; }
   const response = await fetch("https://api.spotify.com/v1/me/player", { headers: { Authorization: `Bearer ${state.token}` } });
-  if (response.status === 401) return disconnect();
+  if (response.status === 401) { disconnect(false); setConnection("SESSION EXPIRED", "Сессия Spotify закончилась. Войди снова на главной странице"); return; }
   if (response.status === 204) { setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
   if (!response.ok) throw new Error("Spotify player request failed");
   const data = await response.json();
@@ -74,11 +74,22 @@ async function refreshTrack() {
   setText("#totalTime", formatTime(state.duration)); renderProgress();
   await loadLyrics(data.item.name, data.item.artists[0]?.name).catch(error => { setConnection("SPOTIFY CONNECTED", "Трек найден, но текст пока недоступен"); console.error(error); });
 }
-function disconnect() { sessionStorage.clear(); state.token = null; if (isLyricsPage) location.href = "index.html"; else { setConnection("NOT CONNECTED", "Войди через Spotify, чтобы начать"); setText("#connectButton", "♫ Войти через Spotify"); } }
+function disconnect(redirect = true) {
+  sessionStorage.removeItem("pulseAccessToken");
+  sessionStorage.removeItem("pulseVerifier");
+  localStorage.removeItem("pulseAccessToken");
+  state.token = null;
+  if (isLyricsPage && redirect) {
+    location.replace(new URL("index.html?logged_out=1", location.href).href);
+    return;
+  }
+  setConnection("NOT CONNECTED", "Войди через Spotify, чтобы начать");
+  setText("#connectButton", "♫ Войти через Spotify");
+}
 function wireCommonControls() {
   $("#fullscreenButton")?.addEventListener("click", () => document.documentElement.requestFullscreen?.());
   $("#refreshButton")?.addEventListener("click", () => refreshTrack().catch(console.error));
-  $("#disconnectButton")?.addEventListener("click", disconnect);
+  document.querySelectorAll("[data-disconnect]").forEach(button => button.addEventListener("click", () => disconnect()));
   $("#settingsButton")?.addEventListener("click", () => $("#settingsDialog")?.showModal());
   $("#closeSettings")?.addEventListener("click", () => $("#settingsDialog")?.close());
   $("#saveSettings")?.addEventListener("click", () => { localStorage.setItem("pulseSettings", JSON.stringify({ lyricsApi: $("#lyricsApi").value.trim() })); $("#settingsDialog").close(); refreshTrack().catch(console.error); });

@@ -19,7 +19,7 @@
       </header>
       <section class="lyrics-hero">
         <div class="track-heading"><p class="eyebrow">NOW PLAYING</p><h1 id="trackTitle">Подключаем Spotify…</h1><p class="track-artist" id="trackArtist">Загрузка текущего трека</p><p class="hint" id="connectionHint">Открой Spotify и запусти музыку</p></div>
-        <div class="track-controls"><button class="secondary-button" id="refreshButton" type="button">↻ Обновить трек</button><button class="secondary-button" id="disconnectButton" type="button">Выйти из Spotify</button></div>
+        <div class="track-controls"><button class="secondary-button" id="refreshButton" type="button">↻ Обновить трек</button><button class="secondary-button" data-disconnect type="button">Выйти из Spotify</button></div>
       </section>
       <section class="lyrics-section">
         <div class="section-heading"><div><p class="eyebrow">SYNCED LYRICS</p><h2>Текст в ритме</h2></div><div class="lyrics-actions"><button class="small-button active" data-mode="karaoke">KARAOKE</button><button class="small-button" data-mode="scroll">SCROLL</button><button class="small-button" id="fullscreenButton" type="button">⛶</button></div></div>
@@ -27,7 +27,7 @@
       </section>
       <footer><span>BUILT FOR THE MOMENTS BETWEEN THE BEATS</span><span>LYRICS BY PULSE AI <span class="footer-star">✦</span></span></footer>
     </main>
-    <dialog id="settingsDialog"><button class="dialog-close" id="closeSettings" type="button">×</button><p class="eyebrow">SETUP</p><h2>Настройки текста</h2><p class="dialog-copy">Укажи URL своего Lyrics API. Сервер должен вернуть массив строк с полями <code>time</code> и <code>text</code>.</p><label>Lyrics API URL<input id="lyricsApi" placeholder="https://your-api.example/lyrics" /></label><button class="primary-button" id="saveSettings" type="button">Сохранить настройки</button></dialog>
+    <dialog id="settingsDialog"><button class="dialog-close" id="closeSettings" type="button">×</button><p class="eyebrow">SETUP</p><h2>Настройки текста</h2><p class="dialog-copy">Укажи URL своего Lyrics API. Сервер должен вернуть массив строк с полями <code>time</code> и <code>text</code>.</p><label>Lyrics API URL<input id="lyricsApi" placeholder="https://your-api.example/lyrics" /></label><button class="primary-button" id="saveSettings" type="button">Сохранить настройки</button><button class="secondary-button" data-disconnect type="button">Выйти из Spotify</button></dialog>
     <script src="app.js"></script>
   </body>
 </html>
