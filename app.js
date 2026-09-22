@@ -1,5 +1,5 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const APP_VERSION = "8e3b6c2";
+const APP_VERSION = "b2d7f41";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
@@ -86,18 +86,16 @@ async function refreshTrack() {
   if (!state.token) { setConnection("NOT CONNECTED", "Войди через Spotify, чтобы увидеть текущий трек"); return; }
   const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${state.token}` } });
   if (response.status === 401) { disconnect(false); setConnection("SESSION EXPIRED", "Сессия Spotify закончилась. Войди снова на главной странице"); return; }
-  if (response.status === 204) { state.isPlaying = false; setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
+  if (response.status === 204) { clearTrack("Открой Spotify и запусти трек"); return; }
   if (!response.ok) throw new Error("Spotify player request failed");
   const data = await response.json();
-  if (!data.item) { setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
+  if (!data.item) { clearTrack("Открой Spotify и запусти трек"); return; }
   const trackChanged = state.trackId !== data.item.id;
   setConnection("SPOTIFY CONNECTED", "Трек синхронизирован с Spotify");
   setText("#trackTitle", data.item.name); setText("#trackArtist", data.item.artists.map(artist => artist.name).join(", "));
   state.isPlaying = Boolean(data.is_playing);
   state.elapsed = (data.progress_ms || 0) / 1000;
-  if (data.is_playing && Number.isFinite(data.timestamp)) state.elapsed += Math.max(0, (Date.now() - data.timestamp) / 1000);
   state.duration = (data.item.duration_ms || 0) / 1000;
-  state.syncedAt = Date.now();
   setText("#totalTime", formatTime(state.duration)); renderProgress();
   if (trackChanged) {
     state.trackId = data.item.id;
@@ -106,6 +104,19 @@ async function refreshTrack() {
     renderLyrics();
     await loadLyrics(data.item.name, data.item.artists[0]?.name).catch(error => { setConnection("SPOTIFY CONNECTED", "Трек найден, но синхронный текст не найден"); console.error(error); });
   }
+}
+function clearTrack(hint) {
+  state.trackId = null;
+  state.isPlaying = false;
+  state.elapsed = 0;
+  state.duration = 0;
+  state.lyrics = [];
+  state.activeIndex = -1;
+  setText("#trackTitle", "Подключаем Spotify…");
+  setText("#trackArtist", "Загрузка текущего трека");
+  setConnection("SPOTIFY CONNECTED", hint);
+  renderLyrics();
+  renderProgress();
 }
 function disconnect(redirect = true) {
   sessionStorage.removeItem("pulseAccessToken");
@@ -143,7 +154,14 @@ if (!isLyricsPage) {
   if (params.get("error")) { setConnection("LOGIN CANCELED", "Доступ не предоставлен. Попробуй ещё раз"); }
   if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace(`lyrics-live-v3.html?v=${APP_VERSION}`); }).catch(error => { setConnection("LOGIN ERROR", `Spotify отклонил вход: ${error.message}`); console.error(error); });
 } else {
-  renderLyrics(); if (!state.token) { setConnection("NOT CONNECTED", "Вернись на главную и войди через Spotify"); } else refreshTrack().catch(() => setConnection("SPOTIFY ERROR", "Не удалось получить текущий трек"));
-  setInterval(() => refreshTrack().catch(console.error), 3000);
-  setInterval(() => { if (state.isPlaying && state.syncedAt) { state.elapsed += (Date.now() - state.syncedAt) / 1000; state.syncedAt = Date.now(); renderProgress(); } }, 250);
+  renderLyrics();
+  if (!state.token) {
+    setConnection("NOT CONNECTED", "Вернись на главную и войди через Spotify");
+  } else {
+    const poll = async () => {
+      try { await refreshTrack(); } catch (error) { console.error(error); setConnection("SPOTIFY ERROR", "Не удалось получить текущий трек"); }
+      window.setTimeout(poll, 1500);
+    };
+    poll();
+  }
 }
