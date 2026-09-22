@@ -1,5 +1,5 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const APP_VERSION = "c4d8f10";
+const APP_VERSION = "f6a2d91";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
@@ -128,7 +128,7 @@ function wireCommonControls() {
     state.activeIndex = -1;
     document.querySelectorAll("[data-mode]").forEach(item => item.classList.remove("active"));
     button.classList.add("active");
-    $("#lyricsWindow").style.overflowY = state.mode === "scroll" ? "auto" : "hidden";
+    $("#lyricsWindow").style.overflowY = "auto";
     renderProgress();
   }));
 }
