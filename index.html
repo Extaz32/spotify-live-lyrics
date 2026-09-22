@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pulse — live lyrics for Spotify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="#"><span class="brand-mark">✦</span> PULSE</a>
+        <div class="topbar-status"><span class="status-dot"></span> LIVE SESSION <span class="divider"></span> <span id="connectionLabel">DEMO MODE</span></div>
+        <button class="icon-button" id="settingsButton" aria-label="Открыть настройки">☷</button>
+      </header>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">YOUR MUSIC. EVERY WORD.</p>
+          <h1>Поймай<br /><em>каждую</em> строчку.</h1>
+          <p class="hero-description">Синхронный текст для трека, который сейчас играет в Spotify — даже если на телевизоре нет караоке.</p>
+          <button class="primary-button" id="connectButton"><span>♫</span> Подключить Spotify</button>
+          <p class="hint">Демо уже запущено · подключение не нужно</p>
+        </div>
+        <div class="now-playing-card">
+          <div class="card-label">NOW PLAYING <span class="equalizer"><i></i><i></i><i></i></span></div>
+          <div class="album-art" id="albumArt"><span>∿</span></div>
+          <div class="track-meta"><div><h2 id="trackTitle">Midnight City</h2><p id="trackArtist">M83</p></div><button class="heart" id="favoriteButton" aria-label="Добавить в избранное">♡</button></div>
+          <div class="progress"><span id="progressBar"></span></div><div class="time"><span id="currentTime">0:42</span><span id="totalTime">4:03</span></div>
+        </div>
+      </section>
+      <section class="lyrics-section">
+        <div class="section-heading"><div><p class="eyebrow">SYNCED LYRICS</p><h2>Текст в ритме</h2></div><div class="lyrics-actions"><button class="small-button active" data-mode="karaoke">KARAOKE</button><button class="small-button" data-mode="scroll">SCROLL</button><button class="small-button" id="fullscreenButton">⛶</button></div></div>
+        <div class="lyrics-window" id="lyricsWindow"></div>
+      </section>
+      <footer><span>BUILT FOR THE MOMENTS BETWEEN THE BEATS</span><span>LYRICS BY PULSE AI <span class="footer-star">✦</span></span></footer>
+    </main>
+    <dialog id="settingsDialog"><button class="dialog-close" id="closeSettings">×</button><p class="eyebrow">SETUP</p><h2>Подключение</h2><p class="dialog-copy">Добавь Spotify Client ID и URL сервера текстов. Демо использует локальный трек.</p><label>Spotify Client ID<input id="clientId" placeholder="your-client-id" /></label><label>Lyrics API URL<input id="lyricsApi" placeholder="https://your-api.example/lyrics" /></label><button class="primary-button" id="saveSettings">Сохранить настройки</button></dialog>
+    <script src="app.js"></script>
+  </body>
+</html>
