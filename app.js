@@ -1,5 +1,5 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const APP_VERSION = "f12a8b6";
+const APP_VERSION = "a71c4e2";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
@@ -77,7 +77,7 @@ async function loadLyrics(title, artist) {
 }
 async function refreshTrack() {
   if (!state.token) { setConnection("NOT CONNECTED", "Войди через Spotify, чтобы увидеть текущий трек"); return; }
-  const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${state.token}`, "Cache-Control": "no-cache" } });
+  const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${state.token}` } });
   if (response.status === 401) { disconnect(false); setConnection("SESSION EXPIRED", "Сессия Spotify закончилась. Войди снова на главной странице"); return; }
   if (response.status === 204) { state.isPlaying = false; setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
   if (!response.ok) throw new Error("Spotify player request failed");
