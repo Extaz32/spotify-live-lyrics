@@ -26,10 +26,18 @@ npm start
 
 ## Spotify и Lyrics API
 
-В настройках укажи Spotify Client ID. Приложение использует Authorization Code
-with PKCE и scope `user-read-currently-playing user-read-playback-state`, поэтому
-секрет Spotify не хранится в браузере. В Spotify Dashboard добавь redirect URI
-`http://localhost:8080/`.
+Кнопка «Подключить Spotify» сразу отправляет пользователя на официальный экран
+входа Spotify. Client ID встроен в публичный frontend — это нормально: Client ID
+не является секретом. Приложение использует Authorization Code with PKCE и scope
+`user-read-currently-playing user-read-playback-state`, поэтому Spotify Client
+Secret не хранится в браузере. В Spotify Dashboard добавь оба redirect URI:
+
+```text
+http://localhost:8080/
+https://extaz32.github.io/spotify-live-lyrics/
+```
+
+Важно: redirect URI должен совпадать с адресом в Dashboard символ в символ.
 
 Lyrics API задаётся URL и вызывается как `GET /?title=...&artist=...`. Ответ:
 
