@@ -1,5 +1,5 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const APP_VERSION = "f6a2d91";
+const APP_VERSION = "8e3b6c2";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
@@ -31,7 +31,10 @@ function renderProgress() {
     const windowElement = $("#lyricsWindow");
     const line = lines[active];
     if (windowElement && line) {
-      windowElement.scrollTo({ top: Math.max(0, line.offsetTop - (windowElement.clientHeight - line.offsetHeight) / 2), behavior: "smooth" });
+      const windowRect = windowElement.getBoundingClientRect();
+      const lineRect = line.getBoundingClientRect();
+      const target = windowElement.scrollTop + lineRect.top - windowRect.top - (windowElement.clientHeight - line.offsetHeight) / 2;
+      windowElement.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
     }
   }
   state.activeIndex = active;
