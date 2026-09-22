@@ -1,11 +1,11 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const APP_VERSION = "bc50349";
+const APP_VERSION = "d5b7a21";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
   : `${location.origin}${location.pathname}`;
 const scope = "user-read-currently-playing user-read-playback-state";
-const state = { token: sessionStorage.getItem("pulseAccessToken"), lyrics: [], elapsed: 0, duration: 0, trackId: null, isPlaying: false, syncedAt: 0 };
+const state = { token: sessionStorage.getItem("pulseAccessToken"), lyrics: [], elapsed: 0, duration: 0, trackId: null, isPlaying: false, syncedAt: 0, mode: "karaoke", activeIndex: -1 };
 const $ = selector => document.querySelector(selector);
 const isLyricsPage = location.pathname.endsWith("lyrics.html");
 const settings = JSON.parse(localStorage.getItem("pulseSettings") || "{}");
@@ -27,6 +27,10 @@ function renderProgress() {
   const lines = [...document.querySelectorAll(".lyric-line")];
   const active = state.lyrics.reduce((index, [time], indexValue) => state.elapsed >= time ? indexValue : index, -1);
   lines.forEach((line, indexValue) => { line.className = `lyric-line ${indexValue < active ? "passed" : ""} ${indexValue === active ? "active" : ""}`; });
+  if (state.mode === "karaoke" && active >= 0 && active !== state.activeIndex) {
+    lines[active]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  state.activeIndex = active;
   const progress = $("#progressBar"); if (progress) progress.style.width = state.duration ? `${Math.min(100, state.elapsed / state.duration * 100)}%` : "0%";
   const current = $("#currentTime"); if (current) current.textContent = formatTime(state.elapsed);
 }
@@ -83,7 +87,9 @@ async function refreshTrack() {
   setConnection("SPOTIFY CONNECTED", "Трек синхронизирован с Spotify");
   setText("#trackTitle", data.item.name); setText("#trackArtist", data.item.artists.map(artist => artist.name).join(", "));
   state.isPlaying = Boolean(data.is_playing);
-  state.elapsed = Math.floor((data.progress_ms || 0) / 1000); state.duration = Math.floor(data.item.duration_ms / 1000);
+  state.elapsed = (data.progress_ms || 0) / 1000;
+  if (data.is_playing && Number.isFinite(data.timestamp)) state.elapsed += Math.max(0, (Date.now() - data.timestamp) / 1000);
+  state.duration = (data.item.duration_ms || 0) / 1000;
   state.syncedAt = Date.now();
   setText("#totalTime", formatTime(state.duration)); renderProgress();
   if (trackChanged) {
@@ -112,7 +118,14 @@ function wireCommonControls() {
   $("#settingsButton")?.addEventListener("click", () => $("#settingsDialog")?.showModal());
   $("#closeSettings")?.addEventListener("click", () => $("#settingsDialog")?.close());
   $("#saveSettings")?.addEventListener("click", () => { localStorage.setItem("pulseSettings", JSON.stringify({ lyricsApi: $("#lyricsApi").value.trim() })); $("#settingsDialog").close(); refreshTrack().catch(console.error); });
-  document.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => { document.querySelectorAll("[data-mode]").forEach(item => item.classList.remove("active")); button.classList.add("active"); $("#lyricsWindow").style.overflowY = button.dataset.mode === "scroll" ? "auto" : "hidden"; }));
+  document.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => {
+    state.mode = button.dataset.mode;
+    state.activeIndex = -1;
+    document.querySelectorAll("[data-mode]").forEach(item => item.classList.remove("active"));
+    button.classList.add("active");
+    $("#lyricsWindow").style.overflowY = state.mode === "scroll" ? "auto" : "hidden";
+    renderProgress();
+  }));
 }
 
 wireCommonControls();
