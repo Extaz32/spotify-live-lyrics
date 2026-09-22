@@ -1,0 +1,8 @@
+{
+  "name": "spotify-live-lyrics",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs"
+  }
+}
