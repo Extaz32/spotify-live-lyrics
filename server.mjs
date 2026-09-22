@@ -11,7 +11,7 @@ const requests = new Map();
 const staticTypes = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8" };
 
 function send(response, status, body, type = "application/json; charset=utf-8") {
-  response.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'self'; connect-src 'self' https://api.spotify.com https://accounts.spotify.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com", "Referrer-Policy": "no-referrer", "Access-Control-Allow-Origin": allowedOrigin, "Vary": "Origin" });
+  response.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'self'; connect-src 'self' https://api.spotify.com https://accounts.spotify.com https://lrclib.net; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com", "Referrer-Policy": "no-referrer", "Access-Control-Allow-Origin": allowedOrigin, "Vary": "Origin" });
   response.end(typeof body === "string" ? body : JSON.stringify(body));
 }
 

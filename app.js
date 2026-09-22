@@ -4,7 +4,7 @@ const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
   : `${location.origin}${location.pathname}`;
 const scope = "user-read-currently-playing user-read-playback-state";
-const state = { token: sessionStorage.getItem("pulseAccessToken"), lyrics: [], elapsed: 0, duration: 0 };
+const state = { token: sessionStorage.getItem("pulseAccessToken"), lyrics: [], elapsed: 0, duration: 0, trackId: null, isPlaying: false, syncedAt: 0 };
 const $ = selector => document.querySelector(selector);
 const isLyricsPage = location.pathname.endsWith("lyrics.html");
 const settings = JSON.parse(localStorage.getItem("pulseSettings") || "{}");
@@ -52,27 +52,45 @@ async function exchangeCode(code) {
   return token.access_token;
 }
 async function loadLyrics(title, artist) {
-  if (!settings.lyricsApi) return;
-  const response = await fetch(`${settings.lyricsApi}?${new URLSearchParams({ title, artist })}`);
-  if (!response.ok) throw new Error("Lyrics API request failed");
-  const result = await response.json();
-  if (!Array.isArray(result)) throw new Error("Lyrics API returned invalid data");
-  state.lyrics = result.filter(line => Number.isFinite(line?.time) && typeof line?.text === "string").map(line => [line.time, line.text]);
+  let result = null;
+  if (settings.lyricsApi) {
+    const response = await fetch(`${settings.lyricsApi}?${new URLSearchParams({ title, artist })}`);
+    if (response.ok) result = await response.json();
+  }
+  if (!Array.isArray(result) || !result.length) {
+    const response = await fetch(`https://lrclib.net/api/get?${new URLSearchParams({ track_name: title, artist_name: artist })}`);
+    if (!response.ok) throw new Error("Synchronized lyrics were not found");
+    const data = await response.json();
+    if (!data.syncedLyrics) throw new Error("Synchronized lyrics were not found");
+    result = data.syncedLyrics.split(/\r?\n/).map(line => {
+      const match = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$/);
+      return match ? { time: Number(match[1]) * 60 + Number(match[2]), text: match[3].trim() } : null;
+    }).filter(Boolean);
+  }
+  state.lyrics = result.filter(line => Number.isFinite(line?.time) && typeof line?.text === "string" && line.text).map(line => [line.time, line.text]);
   renderLyrics(); renderProgress();
 }
 async function refreshTrack() {
   if (!state.token) { setConnection("NOT CONNECTED", "Войди через Spotify, чтобы увидеть текущий трек"); return; }
   const response = await fetch("https://api.spotify.com/v1/me/player", { headers: { Authorization: `Bearer ${state.token}` } });
   if (response.status === 401) { disconnect(false); setConnection("SESSION EXPIRED", "Сессия Spotify закончилась. Войди снова на главной странице"); return; }
-  if (response.status === 204) { setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
+  if (response.status === 204) { state.isPlaying = false; setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
   if (!response.ok) throw new Error("Spotify player request failed");
   const data = await response.json();
   if (!data.item) { setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
+  const trackChanged = state.trackId !== data.item.id;
   setConnection("SPOTIFY CONNECTED", "Трек синхронизирован с Spotify");
   setText("#trackTitle", data.item.name); setText("#trackArtist", data.item.artists.map(artist => artist.name).join(", "));
+  state.isPlaying = Boolean(data.is_playing);
   state.elapsed = Math.floor((data.progress_ms || 0) / 1000); state.duration = Math.floor(data.item.duration_ms / 1000);
+  state.syncedAt = Date.now();
   setText("#totalTime", formatTime(state.duration)); renderProgress();
-  await loadLyrics(data.item.name, data.item.artists[0]?.name).catch(error => { setConnection("SPOTIFY CONNECTED", "Трек найден, но текст пока недоступен"); console.error(error); });
+  if (trackChanged) {
+    state.trackId = data.item.id;
+    state.lyrics = [];
+    renderLyrics();
+    await loadLyrics(data.item.name, data.item.artists[0]?.name).catch(error => { setConnection("SPOTIFY CONNECTED", "Трек найден, но синхронный текст не найден"); console.error(error); });
+  }
 }
 function disconnect(redirect = true) {
   sessionStorage.removeItem("pulseAccessToken");
@@ -104,5 +122,6 @@ if (!isLyricsPage) {
   if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace("lyrics.html"); }).catch(error => { setConnection("LOGIN ERROR", `Spotify отклонил вход: ${error.message}`); console.error(error); });
 } else {
   renderLyrics(); if (!state.token) { setConnection("NOT CONNECTED", "Вернись на главную и войди через Spotify"); } else refreshTrack().catch(() => setConnection("SPOTIFY ERROR", "Не удалось получить текущий трек"));
-  setInterval(() => refreshTrack().catch(console.error), 10000);
+  setInterval(() => refreshTrack().catch(console.error), 3000);
+  setInterval(() => { if (state.isPlaying && state.syncedAt) { state.elapsed += (Date.now() - state.syncedAt) / 1000; state.syncedAt = Date.now(); renderProgress(); } }, 250);
 }
