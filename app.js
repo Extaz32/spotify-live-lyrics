@@ -1,5 +1,5 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const APP_VERSION = "a71c4e2";
+const APP_VERSION = "c4d8f10";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
@@ -28,7 +28,11 @@ function renderProgress() {
   const active = state.lyrics.reduce((index, [time], indexValue) => state.elapsed >= time ? indexValue : index, -1);
   lines.forEach((line, indexValue) => { line.className = `lyric-line ${indexValue < active ? "passed" : ""} ${indexValue === active ? "active" : ""}`; });
   if (state.mode === "karaoke" && active >= 0 && active !== state.activeIndex) {
-    lines[active]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const windowElement = $("#lyricsWindow");
+    const line = lines[active];
+    if (windowElement && line) {
+      windowElement.scrollTo({ top: Math.max(0, line.offsetTop - (windowElement.clientHeight - line.offsetHeight) / 2), behavior: "smooth" });
+    }
   }
   state.activeIndex = active;
   const progress = $("#progressBar"); if (progress) progress.style.width = state.duration ? `${Math.min(100, state.elapsed / state.duration * 100)}%` : "0%";
