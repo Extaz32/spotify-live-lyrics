@@ -47,6 +47,9 @@ Dashboard → приложение → Settings → Redirect URIs, добавь 
 выше, нажми Save и только потом повтори вход. Старый Client Secret для этого
 потока не нужен.
 
+OAuth использует PKCE с verifier длиной 64 символа; Client Secret намеренно не
+используется в браузере.
+
 Lyrics API задаётся URL и вызывается как `GET /?title=...&artist=...`. Ответ:
 
 ```json

@@ -30,7 +30,8 @@ function renderProgress() {
   const current = $("#currentTime"); if (current) current.textContent = formatTime(state.elapsed);
 }
 async function createChallenge() {
-  const verifier = crypto.randomUUID().replaceAll("-", "");
+  const bytes = crypto.getRandomValues(new Uint8Array(48));
+  const verifier = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
   const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   sessionStorage.setItem("pulseVerifier", verifier); return challenge;
@@ -43,7 +44,10 @@ async function login() {
 async function exchangeCode(code) {
   const body = new URLSearchParams({ client_id: CLIENT_ID, grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: sessionStorage.getItem("pulseVerifier") });
   const response = await fetch("https://accounts.spotify.com/api/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
-  if (!response.ok) throw new Error("Spotify login could not be completed");
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.error_description || details.error || "Spotify login could not be completed");
+  }
   const token = await response.json(); sessionStorage.setItem("pulseAccessToken", token.access_token); sessionStorage.removeItem("pulseVerifier");
   return token.access_token;
 }
@@ -86,7 +90,7 @@ if (!isLyricsPage) {
   $("#connectButton")?.addEventListener("click", async () => { $("#connectButton").disabled = true; $("#connectButton").innerHTML = "<span>↗</span> Открываем Spotify…"; await login(); });
   const params = new URLSearchParams(location.search);
   if (params.get("error")) { setConnection("LOGIN CANCELED", "Доступ не предоставлен. Попробуй ещё раз"); }
-  if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace("lyrics.html"); }).catch(error => { setConnection("LOGIN ERROR", "Spotify не принял Redirect URI. Добавь точный адрес из инструкции ниже"); console.error(error); });
+  if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace("lyrics.html"); }).catch(error => { setConnection("LOGIN ERROR", `Spotify отклонил вход: ${error.message}`); console.error(error); });
 } else {
   renderLyrics(); if (!state.token) { setConnection("NOT CONNECTED", "Вернись на главную и войди через Spotify"); } else refreshTrack().catch(() => setConnection("SPOTIFY ERROR", "Не удалось получить текущий трек"));
   setInterval(() => refreshTrack().catch(console.error), 10000);
