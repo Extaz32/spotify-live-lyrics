@@ -1,5 +1,5 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const APP_VERSION = "e7c91d4";
+const APP_VERSION = "f12a8b6";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
@@ -95,6 +95,7 @@ async function refreshTrack() {
   if (trackChanged) {
     state.trackId = data.item.id;
     state.lyrics = [];
+    state.activeIndex = -1;
     renderLyrics();
     await loadLyrics(data.item.name, data.item.artists[0]?.name).catch(error => { setConnection("SPOTIFY CONNECTED", "Трек найден, но синхронный текст не найден"); console.error(error); });
   }
