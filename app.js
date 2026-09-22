@@ -1,4 +1,5 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
+const APP_VERSION = "4c0638c";
 const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
 const REDIRECT_URI = location.hostname === "extaz32.github.io"
   ? PRODUCTION_REDIRECT_URI
@@ -119,7 +120,7 @@ if (!isLyricsPage) {
   $("#connectButton")?.addEventListener("click", async () => { $("#connectButton").disabled = true; $("#connectButton").innerHTML = "<span>↗</span> Открываем Spotify…"; await login(); });
   const params = new URLSearchParams(location.search);
   if (params.get("error")) { setConnection("LOGIN CANCELED", "Доступ не предоставлен. Попробуй ещё раз"); }
-  if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace("lyrics.html"); }).catch(error => { setConnection("LOGIN ERROR", `Spotify отклонил вход: ${error.message}`); console.error(error); });
+  if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace(`lyrics.html?v=${APP_VERSION}`); }).catch(error => { setConnection("LOGIN ERROR", `Spotify отклонил вход: ${error.message}`); console.error(error); });
 } else {
   renderLyrics(); if (!state.token) { setConnection("NOT CONNECTED", "Вернись на главную и войди через Spotify"); } else refreshTrack().catch(() => setConnection("SPOTIFY ERROR", "Не удалось получить текущий трек"));
   setInterval(() => refreshTrack().catch(console.error), 3000);
