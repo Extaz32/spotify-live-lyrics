@@ -1,29 +1,90 @@
-const lyrics = [];
-const PUBLIC_SPOTIFY_CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-let elapsed = 42;
-let accessToken = sessionStorage.getItem("pulseAccessToken");
-const savedSettings = JSON.parse(localStorage.getItem("pulseSettings") || "{}");
-const lyricWindow = document.querySelector("#lyricsWindow");
-function renderLyricNodes(){lyricWindow.replaceChildren(...lyrics.map(([,text])=>{const line=document.createElement("p");line.className="lyric-line";line.textContent=text;return line;}));if(!lyrics.length){const empty=document.createElement("p");empty.className="lyrics-empty";empty.textContent=accessToken?"Текст появится, когда начнётся воспроизведение":"Подключи Spotify, чтобы увидеть синхронный текст";lyricWindow.append(empty);}}
-renderLyricNodes();
-let lines=[...document.querySelectorAll(".lyric-line")];
-function formatTime(seconds){return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,"0")}`;}
-function render(){const active=lyrics.reduce((index,[time],i)=>elapsed>=time?i:index,-1);lines.forEach((line,i)=>line.className=`lyric-line ${i<active?"passed":""} ${i===active?"active":""}`);document.querySelector("#currentTime").textContent=formatTime(elapsed);document.querySelector("#progressBar").style.width=lyrics.length?`${Math.min(100,elapsed/243*100)}%`:"0%";if(lines[active]&&active>1)lyricWindow.scrollTo({top:Math.max(0,lines[active].offsetTop-110),behavior:"smooth"});}
-render();setInterval(()=>{elapsed=elapsed>=243?0:elapsed+1;render();},1000);
-document.querySelector("#favoriteButton").addEventListener("click",e=>{e.currentTarget.textContent=e.currentTarget.textContent==="♡"?"♥":"♡";});
-document.querySelectorAll("[data-mode]").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("[data-mode]").forEach(item=>item.classList.remove("active"));button.classList.add("active");lyricWindow.style.overflowY=button.dataset.mode==="scroll"?"auto":"hidden";}));
-document.querySelector("#fullscreenButton").addEventListener("click",()=>document.documentElement.requestFullscreen?.());
-const dialog=document.querySelector("#settingsDialog");document.querySelector("#settingsButton").addEventListener("click",()=>dialog.showModal());document.querySelector("#closeSettings").addEventListener("click",()=>dialog.close());
-document.querySelector("#saveSettings").addEventListener("click",()=>{localStorage.setItem("pulseSettings",JSON.stringify({lyricsApi:document.querySelector("#lyricsApi").value.trim()}));document.querySelector("#connectionLabel").textContent="CONFIGURED";dialog.close();});
-async function makeChallenge(){const verifier=crypto.randomUUID().replaceAll("-","");const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(verifier));const challenge=btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");sessionStorage.setItem("pulseVerifier",verifier);return challenge;}
-async function spotifyLogin(clientId){const challenge=await makeChallenge();const redirect=`${location.origin}${location.pathname}`;const params=new URLSearchParams({client_id:clientId,response_type:"code",redirect_uri:redirect,code_challenge_method:"S256",code_challenge:challenge,scope:"user-read-currently-playing user-read-playback-state"});location.href=`https://accounts.spotify.com/authorize?${params}`;}
-async function exchangeCode(clientId,code){const body=new URLSearchParams({client_id:clientId,grant_type:"authorization_code",code,redirect_uri:`${location.origin}${location.pathname}`,code_verifier:sessionStorage.getItem("pulseVerifier")});const response=await fetch("https://accounts.spotify.com/api/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});if(!response.ok)throw new Error("Spotify token exchange failed");const token=await response.json();sessionStorage.setItem("pulseAccessToken",token.access_token);sessionStorage.removeItem("pulseVerifier");return token.access_token;}
-async function loadLyrics(title,artist){if(!savedSettings.lyricsApi)return;const response=await fetch(`${savedSettings.lyricsApi}?${new URLSearchParams({title,artist})}`);if(!response.ok)throw new Error("Lyrics API request failed");const result=await response.json();if(!Array.isArray(result))return;lyrics.splice(0,lyrics.length,...result.map(line=>[line.time,line.text]));renderLyricNodes();lines=[...document.querySelectorAll(".lyric-line")];render();}
-function setConnectionState(label,hint){document.querySelector("#connectionLabel").textContent=label;document.querySelector("#connectionHint").textContent=hint;}
-function disconnectSpotify(){accessToken=null;sessionStorage.removeItem("pulseAccessToken");sessionStorage.removeItem("pulseVerifier");setConnectionState("NOT CONNECTED","Войди через Spotify — и Pulse найдёт текущий трек автоматически");document.querySelector("#connectButton").innerHTML="<span>♫</span> Войти через Spotify";document.querySelector("#trackTitle").textContent="Нет активного трека";document.querySelector("#trackArtist").textContent="Подключи Spotify, чтобы начать";lyrics.splice(0,lyrics.length);renderLyricNodes();lines=[...document.querySelectorAll(".lyric-line")];render();}
-async function refreshCurrentTrack(){if(!accessToken)return;const response=await fetch("https://api.spotify.com/v1/me/player",{headers:{Authorization:`Bearer ${accessToken}`}});if(response.status===204){setConnectionState("SPOTIFY CONNECTED","Открой Spotify и запусти трек — Pulse подхватит его автоматически");return;}if(response.status===401){disconnectSpotify();return;}if(!response.ok)throw new Error("Spotify player request failed");const data=await response.json();if(!data.item){setConnectionState("SPOTIFY CONNECTED","Открой Spotify и запусти трек — Pulse подхватит его автоматически");return;}setConnectionState("SPOTIFY CONNECTED","Трек синхронизирован с Spotify");document.querySelector("#trackTitle").textContent=data.item.name;document.querySelector("#trackArtist").textContent=data.item.artists.map(artist=>artist.name).join(", ");elapsed=Math.floor((data.progress_ms||0)/1000);document.querySelector("#totalTime").textContent=formatTime(Math.floor(data.item.duration_ms/1000));const art=data.item.album?.images?.[0]?.url;if(art)document.querySelector("#albumArt").style.background=`url("${art}") center/cover`;render();loadLyrics(data.item.name,data.item.artists[0]?.name).catch(console.error);}
-document.querySelector("#disconnectButton").addEventListener("click",()=>{disconnectSpotify();dialog.close();});
-document.querySelector("#connectButton").addEventListener("click",async()=>{if(accessToken){refreshCurrentTrack().catch(console.error);return;}document.querySelector("#connectButton").disabled=true;document.querySelector("#connectButton").innerHTML="<span>↗</span> Открываем Spotify…";try{await spotifyLogin(PUBLIC_SPOTIFY_CLIENT_ID);}catch(error){document.querySelector("#connectButton").disabled=false;document.querySelector("#connectButton").innerHTML="<span>♫</span> Войти через Spotify";setConnectionState("LOGIN ERROR","Не удалось открыть Spotify. Попробуй ещё раз");console.error(error);}});
-const callbackParams=new URLSearchParams(location.search);const callbackCode=callbackParams.get("code");const callbackError=callbackParams.get("error");if(callbackError){setConnectionState("LOGIN CANCELED","Доступ не предоставлен. Нажми кнопку, чтобы попробовать снова");history.replaceState({},"",location.pathname);}else if(callbackCode)exchangeCode(PUBLIC_SPOTIFY_CLIENT_ID,callbackCode).then(token=>{accessToken=token;history.replaceState({},"",location.pathname);document.querySelector("#connectButton").innerHTML="<span>✓</span> Spotify подключён";setConnectionState("SPOTIFY CONNECTED","Проверяем текущий трек…");refreshCurrentTrack();}).catch(error=>{setConnectionState("LOGIN ERROR","Не удалось завершить вход. Проверь Redirect URI в Spotify Dashboard");console.error(error);});
-if(accessToken){setConnectionState("SPOTIFY CONNECTED","Проверяем текущий трек…");document.querySelector("#connectButton").innerHTML="<span>✓</span> Spotify подключён";refreshCurrentTrack().catch(console.error);}
-setInterval(()=>refreshCurrentTrack().catch(console.error),10000);
+const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
+const REDIRECT_URI = location.href.split("?")[0];
+const scope = "user-read-currently-playing user-read-playback-state";
+const state = { token: sessionStorage.getItem("pulseAccessToken"), lyrics: [], elapsed: 0, duration: 0 };
+const $ = selector => document.querySelector(selector);
+const isLyricsPage = location.pathname.endsWith("lyrics.html");
+const settings = JSON.parse(localStorage.getItem("pulseSettings") || "{}");
+
+function setText(selector, text) { const element = $(selector); if (element) element.textContent = text; }
+function formatTime(seconds) { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`; }
+function setConnection(label, hint) { setText("#connectionLabel", label); setText("#connectionHint", hint); }
+function renderLyrics() {
+  const windowElement = $("#lyricsWindow"); if (!windowElement) return;
+  windowElement.replaceChildren();
+  if (!state.lyrics.length) {
+    const empty = document.createElement("p"); empty.className = "lyrics-empty";
+    empty.textContent = state.token ? "Текст появится после запуска трека" : "Сначала войди через Spotify";
+    windowElement.append(empty); return;
+  }
+  state.lyrics.forEach(([, text]) => { const line = document.createElement("p"); line.className = "lyric-line"; line.textContent = text; windowElement.append(line); });
+}
+function renderProgress() {
+  const lines = [...document.querySelectorAll(".lyric-line")];
+  const active = state.lyrics.reduce((index, [time], indexValue) => state.elapsed >= time ? indexValue : index, -1);
+  lines.forEach((line, indexValue) => { line.className = `lyric-line ${indexValue < active ? "passed" : ""} ${indexValue === active ? "active" : ""}`; });
+  const progress = $("#progressBar"); if (progress) progress.style.width = state.duration ? `${Math.min(100, state.elapsed / state.duration * 100)}%` : "0%";
+  const current = $("#currentTime"); if (current) current.textContent = formatTime(state.elapsed);
+}
+async function createChallenge() {
+  const verifier = crypto.randomUUID().replaceAll("-", "");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  sessionStorage.setItem("pulseVerifier", verifier); return challenge;
+}
+async function login() {
+  const challenge = await createChallenge();
+  const params = new URLSearchParams({ client_id: CLIENT_ID, response_type: "code", redirect_uri: REDIRECT_URI, code_challenge_method: "S256", code_challenge: challenge, scope });
+  location.href = `https://accounts.spotify.com/authorize?${params}`;
+}
+async function exchangeCode(code) {
+  const body = new URLSearchParams({ client_id: CLIENT_ID, grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: sessionStorage.getItem("pulseVerifier") });
+  const response = await fetch("https://accounts.spotify.com/api/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+  if (!response.ok) throw new Error("Spotify login could not be completed");
+  const token = await response.json(); sessionStorage.setItem("pulseAccessToken", token.access_token); sessionStorage.removeItem("pulseVerifier");
+  return token.access_token;
+}
+async function loadLyrics(title, artist) {
+  if (!settings.lyricsApi) return;
+  const response = await fetch(`${settings.lyricsApi}?${new URLSearchParams({ title, artist })}`);
+  if (!response.ok) throw new Error("Lyrics API request failed");
+  const result = await response.json();
+  if (!Array.isArray(result)) throw new Error("Lyrics API returned invalid data");
+  state.lyrics = result.filter(line => Number.isFinite(line?.time) && typeof line?.text === "string").map(line => [line.time, line.text]);
+  renderLyrics(); renderProgress();
+}
+async function refreshTrack() {
+  if (!state.token) { setConnection("NOT CONNECTED", "Войди через Spotify, чтобы увидеть текущий трек"); return; }
+  const response = await fetch("https://api.spotify.com/v1/me/player", { headers: { Authorization: `Bearer ${state.token}` } });
+  if (response.status === 401) return disconnect();
+  if (response.status === 204) { setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
+  if (!response.ok) throw new Error("Spotify player request failed");
+  const data = await response.json();
+  if (!data.item) { setConnection("SPOTIFY CONNECTED", "Открой Spotify и запусти трек"); return; }
+  setConnection("SPOTIFY CONNECTED", "Трек синхронизирован с Spotify");
+  setText("#trackTitle", data.item.name); setText("#trackArtist", data.item.artists.map(artist => artist.name).join(", "));
+  state.elapsed = Math.floor((data.progress_ms || 0) / 1000); state.duration = Math.floor(data.item.duration_ms / 1000);
+  setText("#totalTime", formatTime(state.duration)); renderProgress();
+  await loadLyrics(data.item.name, data.item.artists[0]?.name).catch(error => { setConnection("SPOTIFY CONNECTED", "Трек найден, но текст пока недоступен"); console.error(error); });
+}
+function disconnect() { sessionStorage.clear(); state.token = null; if (isLyricsPage) location.href = "index.html"; else { setConnection("NOT CONNECTED", "Войди через Spotify, чтобы начать"); setText("#connectButton", "♫ Войти через Spotify"); } }
+function wireCommonControls() {
+  $("#fullscreenButton")?.addEventListener("click", () => document.documentElement.requestFullscreen?.());
+  $("#refreshButton")?.addEventListener("click", () => refreshTrack().catch(console.error));
+  $("#disconnectButton")?.addEventListener("click", disconnect);
+  $("#settingsButton")?.addEventListener("click", () => $("#settingsDialog")?.showModal());
+  $("#closeSettings")?.addEventListener("click", () => $("#settingsDialog")?.close());
+  $("#saveSettings")?.addEventListener("click", () => { localStorage.setItem("pulseSettings", JSON.stringify({ lyricsApi: $("#lyricsApi").value.trim() })); $("#settingsDialog").close(); refreshTrack().catch(console.error); });
+  document.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => { document.querySelectorAll("[data-mode]").forEach(item => item.classList.remove("active")); button.classList.add("active"); $("#lyricsWindow").style.overflowY = button.dataset.mode === "scroll" ? "auto" : "hidden"; }));
+}
+
+wireCommonControls();
+if (!isLyricsPage) {
+  $("#connectButton")?.addEventListener("click", async () => { $("#connectButton").disabled = true; $("#connectButton").innerHTML = "<span>↗</span> Открываем Spotify…"; await login(); });
+  const params = new URLSearchParams(location.search);
+  if (params.get("error")) { setConnection("LOGIN CANCELED", "Доступ не предоставлен. Попробуй ещё раз"); }
+  if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace("lyrics.html"); }).catch(() => setConnection("LOGIN ERROR", "Не удалось завершить вход. Проверь Redirect URI"));
+} else {
+  renderLyrics(); if (!state.token) { setConnection("NOT CONNECTED", "Вернись на главную и войди через Spotify"); } else refreshTrack().catch(() => setConnection("SPOTIFY ERROR", "Не удалось получить текущий трек"));
+  setInterval(() => refreshTrack().catch(console.error), 10000);
+}
