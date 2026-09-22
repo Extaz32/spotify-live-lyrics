@@ -1,5 +1,8 @@
 const CLIENT_ID = "9d9c85cb8a9d4134adc57e6975e90c1c";
-const REDIRECT_URI = location.href.split("?")[0];
+const PRODUCTION_REDIRECT_URI = "https://extaz32.github.io/spotify-live-lyrics/";
+const REDIRECT_URI = location.hostname === "extaz32.github.io"
+  ? PRODUCTION_REDIRECT_URI
+  : `${location.origin}${location.pathname}`;
 const scope = "user-read-currently-playing user-read-playback-state";
 const state = { token: sessionStorage.getItem("pulseAccessToken"), lyrics: [], elapsed: 0, duration: 0 };
 const $ = selector => document.querySelector(selector);
@@ -83,7 +86,7 @@ if (!isLyricsPage) {
   $("#connectButton")?.addEventListener("click", async () => { $("#connectButton").disabled = true; $("#connectButton").innerHTML = "<span>↗</span> Открываем Spotify…"; await login(); });
   const params = new URLSearchParams(location.search);
   if (params.get("error")) { setConnection("LOGIN CANCELED", "Доступ не предоставлен. Попробуй ещё раз"); }
-  if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace("lyrics.html"); }).catch(() => setConnection("LOGIN ERROR", "Не удалось завершить вход. Проверь Redirect URI"));
+  if (params.get("code")) exchangeCode(params.get("code")).then(() => { location.replace("lyrics.html"); }).catch(error => { setConnection("LOGIN ERROR", "Spotify не принял Redirect URI. Добавь точный адрес из инструкции ниже"); console.error(error); });
 } else {
   renderLyrics(); if (!state.token) { setConnection("NOT CONNECTED", "Вернись на главную и войди через Spotify"); } else refreshTrack().catch(() => setConnection("SPOTIFY ERROR", "Не удалось получить текущий трек"));
   setInterval(() => refreshTrack().catch(console.error), 10000);

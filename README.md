@@ -42,6 +42,10 @@ https://extaz32.github.io/spotify-live-lyrics/
 ```
 
 Важно: redirect URI должен совпадать с адресом в Dashboard символ в символ.
+Если после входа появляется `Redirect URI mismatch`, открой Spotify Developer
+Dashboard → приложение → Settings → Redirect URIs, добавь production-адрес
+выше, нажми Save и только потом повтори вход. Старый Client Secret для этого
+потока не нужен.
 
 Lyrics API задаётся URL и вызывается как `GET /?title=...&artist=...`. Ответ:
 
