@@ -11,8 +11,7 @@ Spotify Client Secret, ни Gemini API key не нужны во фронтенд
 
 ## Запуск
 
-Для демо открой `index.html` или подними статический сервер. Для Gemini Lyrics
-API используй встроенный Node-сервер:
+Для локального запуска подними встроенный Node-сервер:
 
 ```powershell
 Copy-Item .env.example .env
@@ -23,6 +22,10 @@ npm start
 Затем открой `http://localhost:8080`. Сервер отдаёт `/api/lyrics` и сам
 проксирует запрос к Gemini, поэтому ключ не попадает в браузер.
 В настройках Pulse укажи `http://localhost:8080/api/lyrics` как Lyrics API URL.
+
+Пользовательский сценарий: открой сайт, нажми «Войти через Spotify», подтверди
+доступ на официальной странице Spotify и вернись в Pulse. После входа запусти
+музыку в Spotify — приложение само подхватит текущий трек и запросит текст.
 
 ## Spotify и Lyrics API
 

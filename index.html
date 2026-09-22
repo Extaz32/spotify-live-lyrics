@@ -14,7 +14,7 @@
     <main class="shell">
       <header class="topbar">
         <a class="brand" href="#"><span class="brand-mark">✦</span> PULSE</a>
-        <div class="topbar-status"><span class="status-dot"></span> LIVE SESSION <span class="divider"></span> <span id="connectionLabel">DEMO MODE</span></div>
+        <div class="topbar-status"><span class="status-dot"></span> LIVE SESSION <span class="divider"></span> <span id="connectionLabel">NOT CONNECTED</span></div>
         <button class="icon-button" id="settingsButton" aria-label="Открыть настройки">☷</button>
       </header>
       <section class="hero">
@@ -22,13 +22,13 @@
           <p class="eyebrow">YOUR MUSIC. EVERY WORD.</p>
           <h1>Поймай<br /><em>каждую</em> строчку.</h1>
           <p class="hero-description">Синхронный текст для трека, который сейчас играет в Spotify — даже если на телевизоре нет караоке.</p>
-          <button class="primary-button" id="connectButton"><span>♫</span> Подключить Spotify</button>
-          <p class="hint">Демо уже запущено · подключение не нужно</p>
+          <button class="primary-button" id="connectButton"><span>♫</span> Войти через Spotify</button>
+          <p class="hint" id="connectionHint">Войди через Spotify — и Pulse найдёт текущий трек автоматически</p>
         </div>
         <div class="now-playing-card">
           <div class="card-label">NOW PLAYING <span class="equalizer"><i></i><i></i><i></i></span></div>
           <div class="album-art" id="albumArt"><span>∿</span></div>
-          <div class="track-meta"><div><h2 id="trackTitle">Midnight City</h2><p id="trackArtist">M83</p></div><button class="heart" id="favoriteButton" aria-label="Добавить в избранное">♡</button></div>
+          <div class="track-meta"><div><h2 id="trackTitle">Нет активного трека</h2><p id="trackArtist">Подключи Spotify, чтобы начать</p></div><button class="heart" id="favoriteButton" aria-label="Добавить в избранное">♡</button></div>
           <div class="progress"><span id="progressBar"></span></div><div class="time"><span id="currentTime">0:42</span><span id="totalTime">4:03</span></div>
         </div>
       </section>
